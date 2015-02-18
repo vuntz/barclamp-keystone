@@ -65,10 +65,10 @@ if node[:keystone][:frontend] == 'native'
     only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
   end
 
-  crowbar_pacemaker_order_only_existing "o-#{service_name}" do
-    ordering "postgresql rabbitmq cl-#{service_name}"
-    score "Mandatory"
-    action [ :create ]
+  crowbar_pacemaker_order_only_existing "o-cl-#{service_name}" do
+    ordering [ "postgresql", "rabbitmq", "cl-#{service_name}" ]
+    score "Optional"
+    action :create
     only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
   end
 
