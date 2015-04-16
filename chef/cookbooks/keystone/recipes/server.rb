@@ -106,10 +106,6 @@ node[:keystone][:api][:versioned_internal_URL] = \
   KeystoneHelper.versioned_service_URL(node, my_admin_host,
                                        node[:keystone][:api][:service_port])
 
-# Other barclamps need to know the hostname to reach keystone
-node[:keystone][:api][:public_URL_host] = my_public_host
-node[:keystone][:api][:internal_URL_host] = my_admin_host
-
 if node[:keystone][:frontend] == 'uwsgi'
 
   service "keystone" do
