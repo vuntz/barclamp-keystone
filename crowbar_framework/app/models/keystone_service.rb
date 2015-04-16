@@ -86,6 +86,64 @@ class KeystoneService < PacemakerServiceObject
     super
   end
 
+  def export_to_deployment_config(role)
+    def service_URL(protocol, host, port)
+      "#{protocol}://#{host}:#{port}"
+    end
+
+    def versioned_service_URL(protocol, host, port, api_version)
+      service_URL(protocol, host, port) + '/' + api_version + '/'
+    end
+
+    @logger.debug("Keystone export_to_deployment_config: entering")
+
+    attributes = role.default_attributes[@bc_name]
+    deployment = role.override_attributes[@bc_name]
+
+    config = DeploymentConfig.new("openstack", @bc_name)
+
+    server_element = deployment["elements"]["keystone-server"].first
+
+    # FIXME: should likely be an attribute
+    default_api_version = "v2.0"
+    use_ssl = attributes["api"]["protocol"] == "https"
+
+    if server_element.nil?
+      admin_host = "127.0.0.1"
+      public_host = "127.0.0.1"
+    else
+      admin_host = OpenstackHelpers.get_host_for_admin_url(server_element)
+      public_host = OpenstackHelpers.get_host_for_public_url(server_element, use_ssl)
+    end
+
+    config.set({
+      "api_version" => default_api_version.sub(/^v/, ""),
+      "admin_auth_url" => service_URL(attributes["api"]["protocol"], admin_host, attributes["api"]["admin_port"]),
+      "public_auth_url" => versioned_service_URL(attributes["api"]["protocol"], public_host, attributes["api"]["service_port"], default_api_version),
+      "internal_auth_url" => versioned_service_URL(attributes["api"]["protocol"], admin_host, attributes["api"]["service_port"], default_api_version),
+      "use_ssl" => use_ssl,
+      "endpoint_region" => attributes["api"]["region"],
+      "insecure" => use_ssl && attributes["ssl"]["insecure"],
+      "protocol" => attributes["api"]["protocol"],
+      "public_url_host" => public_host,
+      "internal_url_host" => admin_host,
+      "service_port" => attributes["api"]["service_port"],
+      "admin_port" => attributes["api"]["admin_port"],
+      "admin_token" => attributes["service"]["token"],
+      "admin_tenant" => attributes["admin"]["tenant"],
+      "admin_user" => attributes["admin"]["username"],
+      "admin_password" => attributes["admin"]["password"],
+      "default_tenant" => attributes["default"]["tenant"],
+      "default_user" => attributes["default"]["username"],
+      "default_password" => attributes["default"]["password"],
+      "service_tenant" => attributes["service"]["tenant"]
+    })
+
+    config.save
+
+    @logger.debug("Keystone export_to_deployment_config: leaving")
+  end
+
   def apply_role_pre_chef_call(old_role, role, all_nodes)
     @logger.debug("Keystone apply_role_pre_chef_call: entering #{all_nodes.inspect}")
 
